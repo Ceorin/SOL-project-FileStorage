@@ -17,11 +17,7 @@ Furthermore, a bash script to summarize and print the server log is necessary
 ## Config format
 Config must be a txt file written in the following pattern
 
-> FILE_NUM num
-> MEMORY num
-> WORKERS_NUM num
-> SOCKET socketName
-> LOG logName
+> FILE_NUM num <br> MEMORY num <br> WORKERS_NUM num <br> SOCKET socketName <br> LOG logName <br>
 
 The memory given will be interpreted in *bytes*, adding K or M will respectively make the server interpret it as KB or MB.
 Log files will be saved in the **logs** folder
