@@ -26,7 +26,8 @@ Log files will be saved in the **logs** folder
 The config file cannot have more than 5 lines.
 The values can be in any order but if any one line doesn't follow the pattern, it will raise an exception.
 
-*If a config file is not provided, or if one of the value is not provided in the configuration file used as an argument, the value will be replaced by a default one found in config/config.txt*
+*If a config file is not provided, the default config file will be looked for in the config folder*
+*If the config file used does not contain one of the five parameter, the value will be set to the default for that parameter*
 
 ## Version
 0 - No progress has been made so far
