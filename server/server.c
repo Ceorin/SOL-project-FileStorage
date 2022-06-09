@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <limits.h>
+#include <pthread.h>
 //#include <sys/un.h>
 
 #define test_error(comp, sc, msg) \
@@ -15,10 +17,10 @@
 #define FILE_UPPER_BOUND 1000
 #define MEMORY_UPPER_BOUND 1000000000
 #define WORKER_UPPER_BOUND 64
+#define ERROR_MESSAGE_BUFFER_LENGTH 60
 #ifndef UNIX_PATH_MAX
     #define UNIX_PATH_MAX 108
 #endif
-#define ERROR_MESSAGE_BUFFER_LENGTH 60
 
 
 
@@ -31,21 +33,87 @@ typedef struct {
 } Config;
 Config _config;
 
+void readConfig (char*);
+
+typedef struct {
+    int threadId;
+    pthread_mutex_t * mutEx_reference;
+} threadData;
+
+static void* testThread(void *arg) {
+    threadData td = * (threadData*) arg;
+    static int testValue = 1;
+    short int i = 0;
+    int ret = -1;
+    
+    for (i = 0; i<5; i++) {
+        pthread_mutex_lock(td.mutEx_reference);
+        fprintf(stdout, "Thread: %d - shared value %d\n", td.threadId, testValue++);
+        pthread_mutex_unlock(td.mutEx_reference);
+    }
+    pthread_mutex_lock(td.mutEx_reference);
+        ret = testValue;
+    pthread_mutex_unlock(td.mutEx_reference);
+    pthread_exit((void*) &ret);
+}
+
+
+// SERVER MAIN
+int main (int argc, char *argv[]) {
+    if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
+    }
+    
+    // readd Config file
+    if (argc == 2) readConfig (argv[1]);
+    else readConfig (DEFAULT_CONFIG);
+
+    // debug print - read inputted current _config
+    fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
+    
+    // mockup allocation of worker threads
+    pthread_t *workers;
+    test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
+
+    pthread_mutex_t mutexVar;
+    threadData * threadArgs;
+    pthread_mutex_init(&mutexVar, NULL);
+    
+    for (int i = 0; i < _config.thread_num; i++) {
+        char errmsg[40];
+        threadArgs = (threadData*) malloc(sizeof(threadArgs));
+        threadArgs->threadId=i;
+        threadArgs->mutEx_reference = &mutexVar;
+        snprintf(errmsg, 40, "Creating thread %d", i);
+        test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
+        pthread_detach(workers[i]);
+    }
+
+    while(1);
+    exit(EXIT_SUCCESS);
+}
+
+
+
+
+
+
+// READ Config file from path
 void readConfig (char* path) { 
     int i = 0;
-    char buffer [UNIX_PATH_MAX +100];
-    char key[16], strVal[UNIX_PATH_MAX];
-    unsigned int totRead;
 
+    // reading vars
+    char buffer [UNIX_PATH_MAX +100]; 
+    char key[16], strVal[UNIX_PATH_MAX];
+    long long tempNum;
+    FILE * inp;
+
+    // error-checking vars
+    unsigned int totRead;
     bool configured_Settings[5] = {false};
     bool configError = false;
     char tooMuch[1], // excessive gets strings
         strError[ERROR_MESSAGE_BUFFER_LENGTH]; // error message
     char *strtolExtra; // leftover from strtol
-    long long tempNum;
-
-
-    FILE * inp;
 
     //OPENING config file
     test_error(NULL, inp = fopen (path, "r"), "Opening config file");
@@ -53,7 +121,7 @@ void readConfig (char* path) {
 
     // reading up to 5 lines
     while (i<5 && !feof (inp)) {
-    	test_error(NULL, fgets(buffer, UNIX_PATH_MAX +99, inp), "Reading config file");
+    	test_error(NULL, fgets(buffer, UNIX_PATH_MAX +100, inp), "Reading config file");
 
         if (!strcmp(buffer,"\n") || !strcmp(buffer,"\r\n") || buffer[0]=='\0') // read empty line, ignore
             continue;
@@ -263,19 +331,4 @@ void readConfig (char* path) {
 
     test_error_isNot(0, fclose(inp), "Closing config file");
     fprintf(stdout, "Read config file: Success!\nLeaving readConfig()\n"); //debug line
-}
-
-// SERVER MAIN
-int main (int argc, char *argv[]) {
-    if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
-    }
-    
-    // readd Config file
-    if (argc == 2) readConfig (argv[1]);
-    else readConfig (DEFAULT_CONFIG);
-
-    // debug print - read inputted current _config
-    fprintf(stdout, "Number of files: %u\nMemory size: %u\nThread number: %u\nSocket: %s\nLog file path: %s\n", _config.file_num, _config.cache_size, _config.thread_num, _config.server_socket_name, _config.log_file_name);
-    
-    exit(EXIT_SUCCESS);
 }
