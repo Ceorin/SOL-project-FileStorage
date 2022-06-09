@@ -46,14 +46,16 @@ static void* testThread(void *arg) {
     free(arg);
     static int testValue = 1;
     short int i = 0;
+    int ret = -1;
     
     for (i = 0; i<15; i++) {
         pthread_mutex_lock(&testMutex);
+        ret = testValue;
         fprintf(stdout, "Thread: %d - shared value %d\n", td.threadId, testValue++);
-        fflush(stdout);
         pthread_mutex_unlock(&testMutex);
     }
-    return NULL;
+
+    pthread_exit((void*) ret);
 }
 
 
@@ -83,10 +85,14 @@ int main (int argc, char *argv[]) {
         threadArgs->threadId=i;
         snprintf(errmsg, 40, "Creating thread %d", i);
         test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
-        pthread_detach(workers[i]);
     }
 
-    while(1);
+    for (int i = 0; i < _config.thread_num; i++) {
+        int status;
+        test_error_isNot(0, pthread_join(workers[i], (void*) &status), "Joining back a thread");
+        fprintf(stdout, "MAIN joined thread %d with value %d\n", i, status);
+        fflush(stdout);
+    }
     exit(EXIT_SUCCESS);
 }
 
