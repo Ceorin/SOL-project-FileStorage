@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <pthread.h>
+#include "worker.h"
 //#include <sys/un.h>
 
 #define test_error(comp, sc, msg) \
@@ -22,8 +23,6 @@
     #define UNIX_PATH_MAX 108
 #endif
 
-
-
 typedef struct {
     unsigned int file_num;
     unsigned int cache_size;
@@ -34,29 +33,6 @@ typedef struct {
 Config _config;
 
 void readConfig (char*);
-
-static pthread_mutex_t testMutex = PTHREAD_MUTEX_INITIALIZER;
-typedef struct {
-    int threadId;
-} threadData;
-
-static void* testThread(void *arg) {
-    threadData td;
-    td.threadId = (*(threadData*) arg).threadId;
-    free(arg);
-    static int testValue = 1;
-    short int i = 0;
-    int ret = -1;
-    
-    for (i = 0; i<15; i++) {
-        pthread_mutex_lock(&testMutex);
-        ret = testValue;
-        fprintf(stdout, "Thread: %d - shared value %d\n", td.threadId, testValue++);
-        pthread_mutex_unlock(&testMutex);
-    }
-
-    pthread_exit((void*) ret);
-}
 
 
 // SERVER MAIN

@@ -30,4 +30,4 @@ The values can be in any order but if any one line doesn't follow the pattern, i
 *If the config file used does not contain one of the five parameter, the value will be set to the default for that parameter*
 
 ## Version
-0 - No progress has been made so far
+0.00 - Pretty much nothing to work with so far
