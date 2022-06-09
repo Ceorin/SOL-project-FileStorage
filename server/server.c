@@ -35,26 +35,25 @@ Config _config;
 
 void readConfig (char*);
 
+static pthread_mutex_t testMutex = PTHREAD_MUTEX_INITIALIZER;
 typedef struct {
     int threadId;
-    pthread_mutex_t * mutEx_reference;
 } threadData;
 
 static void* testThread(void *arg) {
-    threadData td = * (threadData*) arg;
+    threadData td;
+    td.threadId = (*(threadData*) arg).threadId;
+    free(arg);
     static int testValue = 1;
     short int i = 0;
-    int ret = -1;
     
-    for (i = 0; i<5; i++) {
-        pthread_mutex_lock(td.mutEx_reference);
+    for (i = 0; i<15; i++) {
+        pthread_mutex_lock(&testMutex);
         fprintf(stdout, "Thread: %d - shared value %d\n", td.threadId, testValue++);
-        pthread_mutex_unlock(td.mutEx_reference);
+        fflush(stdout);
+        pthread_mutex_unlock(&testMutex);
     }
-    pthread_mutex_lock(td.mutEx_reference);
-        ret = testValue;
-    pthread_mutex_unlock(td.mutEx_reference);
-    pthread_exit((void*) &ret);
+    return NULL;
 }
 
 
@@ -82,7 +81,6 @@ int main (int argc, char *argv[]) {
         char errmsg[40];
         threadArgs = (threadData*) malloc(sizeof(threadArgs));
         threadArgs->threadId=i;
-        threadArgs->mutEx_reference = &mutexVar;
         snprintf(errmsg, 40, "Creating thread %d", i);
         test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
         pthread_detach(workers[i]);
