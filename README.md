@@ -23,7 +23,7 @@ The memory given will be interpreted in *bytes*, adding K or M will respectively
 Log files will be saved in the **logs** folder
 
 **ATTENTION**
-The config file cannot have more than 5 lines.
+The config file cannot have more than 5 lines (except empty lines)
 The values can be in any order but if any one line doesn't follow the pattern, it will raise an exception.
 
 *If a config file is not provided, the default config file will be looked for in the config folder*

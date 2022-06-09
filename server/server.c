@@ -61,7 +61,7 @@ void readConfig (char* path) {
     	totRead = sscanf(buffer, "%s %s %s", key, strVal, tooMuch);
         if (totRead != 2) { // each line must be KEY VALUE and only as such
             configError=true;
-            strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "each line must contain no less and no more of 2 values");
+            strncpy(strError, "each line must contain no less and no more of 2 values", ERROR_MESSAGE_BUFFER_LENGTH);
             break;
         }
 
@@ -70,32 +70,32 @@ void readConfig (char* path) {
 
             if (configured_Settings[0]) { // number of file already defined
                 configError=true;
-                strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "FILE_NUM already defined");
+                strncpy(strError, "FILE_NUM already defined", ERROR_MESSAGE_BUFFER_LENGTH);
                 break;
             } else { // else check value of FILE_NUM key
                 errno = 0;
                 tempNum = strtol(strVal, &strtolExtra, 10);
                 if (errno == ERANGE) {
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Out of bound number");
+                    strncpy(strError, "Out of bound number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (strtolExtra[0]!='\0') { // leftover string > not really a integer, maybe not even a number
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a number");
+                    strncpy(strError, "Must be a number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum <= 0 ) { // neg-or-zero value 
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a positive integer");
+                    strncpy(strError, "Must be a positive integer", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum > FILE_UPPER_BOUND || tempNum > UINT_MAX) { // too many files or not an unsigned int
                     configError=true;
-                    sprintf_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "FILE_NUM limit is %u", (unsigned int) FILE_UPPER_BOUND);
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "FILE_NUM limit is %u", (unsigned int) FILE_UPPER_BOUND);
                     break;
                 }
                 
@@ -109,20 +109,20 @@ void readConfig (char* path) {
         else if (!strcmp(key, "MEMORY")) {
             if (configured_Settings[1]) { // memory size already defined
                 configError=true;
-                strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "MEMORY already defined");
+                strncpy(strError, "MEMORY already defined", ERROR_MESSAGE_BUFFER_LENGTH);
                 break;
             } else { // check value of MEMORY key
                 errno = 0;
                 tempNum = strtol(strVal, &strtolExtra, 10);
                 if (errno == ERANGE) {
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Out of bound number");
+                    strncpy(strError, "Out of bound number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum <=0 ) { // neg-or-zero value 
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a positive integer");
+                    strncpy(strError, "Must be a positive integer", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
                 
@@ -138,13 +138,13 @@ void readConfig (char* path) {
                         tempNum = MEMORY_UPPER_BOUND+1;
                 } else if (strtolExtra[0] != '\0') { // else not a number
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a number");
+                    strncpy(strError, "Must be a number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum > MEMORY_UPPER_BOUND || tempNum > UINT_MAX) { // too much memory required or not an unsigned int
                     configError=true;
-                    sprintf_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Memory size limit is %u byte", (unsigned int) MEMORY_UPPER_BOUND);
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Memory size limit is %u byte", (unsigned int) MEMORY_UPPER_BOUND);
                     break;
                 }
                 
@@ -158,32 +158,32 @@ void readConfig (char* path) {
         else if (!strcmp(key, "WORKERS_NUM")) {
             if (configured_Settings[2]) {
                 configError=true;
-                strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "WORKERS_NUM already defined");
+                strncpy(strError, "WORKERS_NUM already defined", ERROR_MESSAGE_BUFFER_LENGTH);
                 break;
             } else {
                 errno = 0;
                 tempNum = strtol(strVal, &strtolExtra, 10);
                 if (errno == ERANGE) {
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Out of bound number");
+                    strncpy(strError, "Out of bound number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (strtolExtra[0] != '\0') { // leftover string > not really a integer, maybe not even a number
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a number");
+                    strncpy(strError, "Must be a number", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum <=0 ) { // neg-or-zero value 
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "Must be a positive integer");
+                    strncpy(strError, "Must be a positive integer", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
 
                 if (tempNum > WORKER_UPPER_BOUND || tempNum > UINT_MAX) { // too many worker threads or not an unsigned int
                     configError=true;
-                    sprintf_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "WORKER_NUM limit is %u", (unsigned int) WORKER_UPPER_BOUND);
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "WORKER_NUM limit is %u", (unsigned int) WORKER_UPPER_BOUND);
                     break;
                 }
                 
@@ -197,23 +197,23 @@ void readConfig (char* path) {
         else if (!strcmp(key, "SOCKET")) {
             if (configured_Settings[3]) { // SOCKET name already defined
                 configError=true;
-                strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "SOCKET already defined");
+                strncpy(strError, "SOCKET already defined", ERROR_MESSAGE_BUFFER_LENGTH);
                 break;
             } else {
                 if (strVal[0] == '\0') { // read empty string. Shouldn't happen - this is weird
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "SOCKET cannot be an empty string");
+                    strncpy(strError, "SOCKET cannot be an empty string", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
                 if (strlen(strVal) >= UNIX_PATH_MAX) { // checks if the path length is alright for the socket standard
                     configError=true;
-                    sprintf_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The socket path must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The socket path must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
                     break;
                 }
                 // is it needed to check if the string is valid? Probably not, probably it will be the SC call to return an error then
 
                 // everything seems good, we can use the strVal read as socket name for the server
-                strcpy_s(_config.server_socket_name, UNIX_PATH_MAX, strVal);
+                strncpy(_config.server_socket_name, strVal, UNIX_PATH_MAX);
 
                 configured_Settings[3] = true;
             }
@@ -222,23 +222,23 @@ void readConfig (char* path) {
         else if (!strcmp(key, "LOG")) {
             if (configured_Settings[4]) {
                 configError=true;
-                strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "LOG already defined");
+                strncpy(strError, "LOG already defined", ERROR_MESSAGE_BUFFER_LENGTH);
                 break;
             } else {
                 if (strVal[0] == '\0') { // read empty string. Shouldn't happen - this is weird
                     configError=true;
-                    strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "LOG name cannot be an empty string");
+                    strncpy(strError, "LOG name cannot be an empty string", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
                 if (strlen(strVal) >= UNIX_PATH_MAX) { // checks if the path length is alright for the socket standard
                     configError=true;
-                    sprintf_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The log file name must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The log file name must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
                     break;
                 }
                 // is it needed to check if the string is valid? Probably not, probably it will be the SC call to return an error then
 
                 // everything seems good, we can use the strVal read as socket name for the server
-                strcpy_s(_config.log_file_name, UNIX_PATH_MAX, strVal);
+                strncpy(_config.log_file_name, strVal, UNIX_PATH_MAX);
 
                 configured_Settings[4] = true;
             }
@@ -246,7 +246,7 @@ void readConfig (char* path) {
         
         else { // first line argument doesn't make sense
             configError=true;
-            strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "KEY not recognized");
+            strncpy(strError, "KEY not recognized", ERROR_MESSAGE_BUFFER_LENGTH);
             break;
         }
         
@@ -255,11 +255,11 @@ void readConfig (char* path) {
 
     /*if (!feof (inp)) { // IS THIS NECESSARY?
         configError=true;
-        strcpy_s(strError, ERROR_MESSAGE_BUFFER_LENGTH, "too long but well read");
+        strncpy(strError, "too long but well read", ERROR_MESSAGE_BUFFER_LENGTH);
     }*/
 
 
-    if (configError) { fprintf(stderr, "Improper config format: %s\t at Entry:%d\n", strError, i+1); exit(EXIT_FAILURE); }
+    if (configError) { fprintf(stderr, "Improper config format: %s\tat Entry:%d\n", strError, i+1); exit(EXIT_FAILURE); }
 
     test_error_isNot(0, fclose(inp), "Closing config file");
     fprintf(stdout, "Read config file: Success!\nLeaving readConfig()\n"); //debug line
