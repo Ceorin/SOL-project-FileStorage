@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include "worker.h"
+
 //#include <sys/un.h>
 
 #define test_error(comp, sc, msg) \
@@ -14,7 +15,7 @@
 #define test_error_isNot(comp, sc, msg) \
     if ((sc) != (comp) ) { perror (msg); exit(EXIT_FAILURE); }
 
-#define DEFAULT_CONFIG "../config/config.txt"
+#define DEFAULT_CONFIG "config/config.txt"
 #define FILE_UPPER_BOUND 1000
 #define MEMORY_UPPER_BOUND 1000000000
 #define WORKER_UPPER_BOUND 64
