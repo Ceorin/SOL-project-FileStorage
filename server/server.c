@@ -5,36 +5,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <limits.h>
-#include <pthread.h>
 #include "worker.h"
+#include "fileCache.h"
+#include "server.h"
+#include <sys/un.h>
 
-//#include <sys/un.h>
 
-#define test_error(comp, sc, msg) \
-    if ((sc) == (comp) ) { perror (msg); exit(EXIT_FAILURE); }
-#define test_error_isNot(comp, sc, msg) \
-    if ((sc) != (comp) ) { perror (msg); exit(EXIT_FAILURE); }
-
-#define DEFAULT_CONFIG "config/config.txt"
-#define FILE_UPPER_BOUND 1000
-#define MEMORY_UPPER_BOUND 1000000000
-#define WORKER_UPPER_BOUND 64
-#define ERROR_MESSAGE_BUFFER_LENGTH 60
-#ifndef UNIX_PATH_MAX
-    #define UNIX_PATH_MAX 108
-#endif
-
-typedef struct {
-    unsigned int file_num;
-    unsigned int cache_size;
-    unsigned int thread_num;
-    char server_socket_name[UNIX_PATH_MAX]; 
-    char log_file_name[UNIX_PATH_MAX];
-} Config;
-Config _config;
-
-void readConfig (char*);
-
+static Config _config;
 
 // SERVER MAIN
 int main (int argc, char *argv[]) {
@@ -48,6 +25,10 @@ int main (int argc, char *argv[]) {
     // debug print - read inputted current _config
     fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
     
+    
+
+    initCache(_config);
+
     // mockup allocation of worker threads
     pthread_t *workers;
     test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
@@ -58,9 +39,9 @@ int main (int argc, char *argv[]) {
     
     for (int i = 0; i < _config.thread_num; i++) {
         char errmsg[40];
-        threadArgs = (threadData*) malloc(sizeof(threadArgs));
-        threadArgs->threadId=i;
         snprintf(errmsg, 40, "Creating thread %d", i);
+        test_error (NULL, threadArgs = (threadData*) malloc(sizeof(threadArgs)),  errmsg);
+        threadArgs->threadId=i;
         test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
     }
 
@@ -70,6 +51,9 @@ int main (int argc, char *argv[]) {
         fprintf(stdout, "MAIN joined thread %d with value %d\n", i, status);
         fflush(stdout);
     }
+    
+    fprintf(stdout, "Main finished");
+    mockupCheckMemory();
     exit(EXIT_SUCCESS);
 }
 

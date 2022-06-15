@@ -9,3 +9,4 @@
 # Ignore files used during executions in the default directory
 defaultWriteTO/*
 logs/*
+.vscode

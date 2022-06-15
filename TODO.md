@@ -9,7 +9,7 @@
  - [ ] scripts for statistical results
 
 ## In Progress
- - [ ] Makefile
+ - [ ] Makefile (skeleton of it: done)
  - [ ] Implementing thread pool for workers
  - [ ] re-defining project structure to conform to the gcc not being able to look into subdirectories automatically without needing to make an entire script and feed it each sub-directory one by one
 
