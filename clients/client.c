@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <sys/un.h>
 
 #define helpMsg \
 "This program is an application designed to communicate with a file server through the communication API defined in this project, to upload and download files on it.\n\

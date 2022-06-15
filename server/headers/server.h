@@ -21,7 +21,6 @@
         char server_socket_name[UNIX_PATH_MAX]; 
         char log_file_name[UNIX_PATH_MAX];
     } Config;
-    static Config _config;
 
     void readConfig (char*);
 #endif

@@ -21,5 +21,7 @@
 
     static fileCache _fileCache;
 
-    int initCache ();
+    int initCache (Config);
+    void mockupAccessCache (int);
+    void mockupCheckMemory ();
 #endif
