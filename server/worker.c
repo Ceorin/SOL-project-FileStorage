@@ -5,7 +5,7 @@
 #include "server.h"
 #include "fileCache.h"
 
-void* testThread(void *arg) {
+void* testThread(void *arg) { // TODO redo this - this is mainly a mockup thing to test thread and mutex in c
     threadData td;
     td.threadId = (*(threadData*) arg).threadId;
     free(arg);

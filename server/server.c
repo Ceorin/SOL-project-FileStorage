@@ -15,16 +15,21 @@
 #include <sys/socket.h>
 
 
+
 static Config _config;
 
 // SERVER MAIN
 int main (int argc, char *argv[]) {
     if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
     }
+    pthread_t *workers;
+    int server_listener, client_socket;
+    struct sockaddr_un socketAddress;
+    
     int devNull;
     int saveOut;
+    // debug stuff - redirecting stdout (and saving it to recover it later)
     test_error(-1, saveOut = dup(STDOUT_FILENO), "Saving stdout descriptor");
-
     test_error(-1, devNull = open("/dev/null", O_WRONLY), "Opening dev/null"); // debug: send away stdout for a while
     test_error(-1, dup2(devNull, STDOUT_FILENO), "Redirecting stdout");
 
@@ -35,17 +40,17 @@ int main (int argc, char *argv[]) {
     // debug print - read inputted current _config
     fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
     
-    
-
+    // not really mockup but needs better implementation once the cache is developed
     initCache(_config);
 
     // mockup allocation of worker threads
-    pthread_t *workers;
     test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
-
-    pthread_mutex_t mutexVar;
+    
+    
     threadData * threadArgs;
-    pthread_mutex_init(&mutexVar, NULL);
+   
+    /*pthread_mutex_t mutexVar;
+    pthread_mutex_init(&mutexVar, NULL);*/
     
     for (int i = 0; i < _config.thread_num; i++) {
         char errmsg[40];
@@ -72,8 +77,6 @@ int main (int argc, char *argv[]) {
     fprintf(stdout, "\nMaking sockets...\n");    
     
     // Creating server socket
-    int server_listener, client_socket;
-    struct sockaddr_un socketAddress;
 
     strncpy(socketAddress.sun_path, _config.server_socket_name, UNIX_PATH_MAX);
     socketAddress.sun_family = AF_UNIX;
@@ -84,11 +87,25 @@ int main (int argc, char *argv[]) {
     test_error(-1, bind(server_listener, (struct sockaddr *) &socketAddress,  sizeof(socketAddress)), "Binding server socket");
     test_error(-1, listen(server_listener, SOMAXCONN), "Server listen");
 
-
+    // sort of debug
     fprintf(stdout, "Server socket ready to listen in address: %s as fd: %d!\nReady to accept!\n", socketAddress.sun_path, server_listener); // debug
     fflush(stdout);
+    
+    // accepting client (should be in a while with a poll including the threads)
     test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
     fprintf(stdout, "Accepted a client!\n");
+
+    #define BUFSIZE 100
+    char client_Buffer[BUFSIZE];
+
+    read(client_socket, client_Buffer, BUFSIZE);
+    
+    fprintf (stdout, "Client says: %s\n", client_Buffer);
+
+
+    test_error(-1, close(client_socket), "Closing client socket");
+
+    // closing sockets 
     test_error(-1, unlink(socketAddress.sun_path), "Closing server socket");
     test_error(-1, close(server_listener), "Closing server socket");
     exit(EXIT_SUCCESS);

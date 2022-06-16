@@ -4,7 +4,7 @@
 
 ## Description
 
-The project consists of developing a file storage server that uses the main memory to store files in an UNIX environment.
+The project consists of developing a file storage server that uses the main memory to store files in an **UNIX** environment.
 
 The server is a multi-threaded process that accepts connection from multiple clients on the same device (using AF_UNIX sockets), logging every operation.
 
@@ -13,6 +13,20 @@ The type and number of requests depend on the command line argument used to star
 
 The Makefile will also include 3 test target to check if the server performs appropriately
 Furthermore, a bash script to summarize and print the server log is necessary
+
+## Installation & Run instrunction
+The project can be cloned from this github repository or downloaded from it all the same.
+
+It must run on an unix operative system.
+To compile it, you can run 'make' in the project root folder from CLI, which will compile all the sources in object files and then link them into the ServerApp and the ClientApp executables.
+
+ServerApp.exe will read a config file from CLI or the default config.txt found into the config folder (doing some mockup tests for now), and it will create an AF_UNIX socket in the project tmp/ folder.
+
+ClientApp will read the CLI and will act on the options given. 
+However, it currently cannot do much - at most it will connect to the server (the path must be relative to its own, by default using the command '-f tmp/mySocketDefault') and write a simple message before terminating. 
+(you can choose the message with the option -W, which should normally write files into the server but the feature is not implemented in this version)
+
+The makefile can also be used to clean the project folder from every .o, .exe and from the socket tmp file in case an error occurred and it has been left there.
 
 ## Config format
 Config must be a txt file written in the following pattern
@@ -30,4 +44,4 @@ The values can be in any order but if any one line doesn't follow the pattern, i
 *If the config file used does not contain one of the five parameter, the value will be set to the default for that parameter*
 
 ## Version
-0.00 - Pretty much nothing to work with so far
+0.02 - Very little has been implemented, mostly mockups of functions. The Project is now public.

@@ -44,6 +44,8 @@ int main (int argc, char *argv[]) {
     unsigned int flags = 0;
     int my_fdSocket;
     struct sockaddr_un ServerSocketAddress;
+
+    char test[100] = "nothing, really...";
     
     // POSSIBLE IDEA : VECTOR OF REQUESTS
 
@@ -82,7 +84,7 @@ int main (int argc, char *argv[]) {
             case 'W':
                 if (flags & WRITE_SET)
                     fprintf(stdout, "New write files!\t");
-                fprintf(stdout, "Option write files with: %s\t NOT_IMPLEMENTED\n", optarg);
+                strncpy(test, optarg, 100);
                 flags = flags | WRITE_SET;
                 break;
             case 'D':
@@ -153,5 +155,9 @@ int main (int argc, char *argv[]) {
     }
     fprintf(stdout, "Connected!\n");
 
-    return 0;
+    write(my_fdSocket, test, 100);
+
+    close(my_fdSocket);
+
+    exit(EXIT_SUCCESS);
 }
