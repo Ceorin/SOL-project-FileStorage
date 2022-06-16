@@ -8,7 +8,11 @@
 #include "worker.h"
 #include "fileCache.h"
 #include "server.h"
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 static Config _config;
@@ -17,7 +21,13 @@ static Config _config;
 int main (int argc, char *argv[]) {
     if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
     }
-    
+    int devNull;
+    int saveOut;
+    test_error(-1, saveOut = dup(STDOUT_FILENO), "Saving stdout descriptor");
+
+    test_error(-1, devNull = open("/dev/null", O_WRONLY), "Opening dev/null"); // debug: send away stdout for a while
+    test_error(-1, dup2(devNull, STDOUT_FILENO), "Redirecting stdout");
+
     // readd Config file
     if (argc == 2) readConfig (argv[1]);
     else readConfig (DEFAULT_CONFIG);
@@ -51,9 +61,36 @@ int main (int argc, char *argv[]) {
         fprintf(stdout, "MAIN joined thread %d with value %d\n", i, status);
         fflush(stdout);
     }
+
+    // debug reopening stdout;
+    test_error(-1, dup2(saveOut, STDOUT_FILENO), "Re-redirecting stdout");
     
+    // debug messages and such
     fprintf(stdout, "Main finished");
     mockupCheckMemory();
+    
+    fprintf(stdout, "\nMaking sockets...\n");    
+    
+    // Creating server socket
+    int server_listener, client_socket;
+    struct sockaddr_un socketAddress;
+
+    strncpy(socketAddress.sun_path, _config.server_socket_name, UNIX_PATH_MAX);
+    socketAddress.sun_family = AF_UNIX;
+    
+    unlink(socketAddress.sun_path); // in case the socket hasn't been cleaned or the file is already present or something
+    errno=0; // we ignore errors from unlink, the notable ones should be found by socket and bind
+    test_error(-1, server_listener = socket(AF_UNIX, SOCK_STREAM, 0), "Creating server socket");
+    test_error(-1, bind(server_listener, (struct sockaddr *) &socketAddress,  sizeof(socketAddress)), "Binding server socket");
+    test_error(-1, listen(server_listener, SOMAXCONN), "Server listen");
+
+
+    fprintf(stdout, "Server socket ready to listen in address: %s as fd: %d!\nReady to accept!\n", socketAddress.sun_path, server_listener); // debug
+    fflush(stdout);
+    test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
+    fprintf(stdout, "Accepted a client!\n");
+    test_error(-1, unlink(socketAddress.sun_path), "Closing server socket");
+    test_error(-1, close(server_listener), "Closing server socket");
     exit(EXIT_SUCCESS);
 }
 
@@ -238,15 +275,15 @@ void readConfig (char* path) {
                     strncpy(strError, "SOCKET cannot be an empty string", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
-                if (strlen(strVal) >= UNIX_PATH_MAX) { // checks if the path length is alright for the socket standard
+                if (strlen(strVal) > (UNIX_PATH_MAX-5)) { // checks if the path length is alright for the socket standard
                     configError=true;
-                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The socket path must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The socket path must contain %d characters or less", (int) UNIX_PATH_MAX-5 );
                     break;
                 }
                 // is it needed to check if the string is valid? Probably not, probably it will be the SC call to return an error then
 
                 // everything seems good, we can use the strVal read as socket name for the server
-                strncpy(_config.server_socket_name, strVal, UNIX_PATH_MAX);
+                snprintf(_config.server_socket_name, UNIX_PATH_MAX, "tmp/%s", strVal);
 
                 configured_Settings[3] = true;
             }
@@ -263,15 +300,15 @@ void readConfig (char* path) {
                     strncpy(strError, "LOG name cannot be an empty string", ERROR_MESSAGE_BUFFER_LENGTH);
                     break;
                 }
-                if (strlen(strVal) >= UNIX_PATH_MAX) { // checks if the path length is alright for the socket standard
+                if (strlen(strVal) > (UNIX_PATH_MAX-5)) { // checks if the path length is alright for the socket standard
                     configError=true;
-                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The log file name must contain %d characters or less", (int) UNIX_PATH_MAX-1 );
+                    snprintf(strError, ERROR_MESSAGE_BUFFER_LENGTH, "The log file name must contain %d characters or less", (int) UNIX_PATH_MAX-5 );
                     break;
                 }
                 // is it needed to check if the string is valid? Probably not, probably it will be the SC call to return an error then
 
                 // everything seems good, we can use the strVal read as socket name for the server
-                strncpy(_config.log_file_name, strVal, UNIX_PATH_MAX);
+                snprintf(_config.log_file_name, UNIX_PATH_MAX, "log/%s", strVal);
 
                 configured_Settings[4] = true;
             }
@@ -286,7 +323,7 @@ void readConfig (char* path) {
     	i++;
     }
 
-    /*if (!feof (inp)) { // IS THIS NECESSARY?
+    /*if (!feof (inp)) { // WOULD THIS BE NECESSARY?
         configError=true;
         strncpy(strError, "too long but well read", ERROR_MESSAGE_BUFFER_LENGTH);
     }*/

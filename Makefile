@@ -10,11 +10,13 @@ SERVER = server
 SERVER_HD = server/headers
 
 UTILITIES = utils
+TEMP = tmp
+LOG = log
 
 SERVER_C_SRC := $(wildcard $(SERVER)/*.c)
 SERVER_OBJ :=  $(SERVER_C_SRC:.c=.o)
 
-.PHONY: clean test1 test2 test3
+.PHONY: clean cleanTmp cleanLog test1 test2 test3
 
 all : serverApp.exe clientApp.exe
 
@@ -40,12 +42,21 @@ $(API)/communicationAPI.o : $(API)/communicationAPI.c $(API)/communicationAPI.h
 # TODO extra/utility folders dependencies?
 
 # TODO better clean?
-clean:
-	@echo "removing garbage"
+clean: cleanTmp cleanLog
+	@echo "removing object files"
 	rm -rf $(SERVER_OBJ)
 	rm -rf $(wildcard $(CLIENTS)/*.o)
 	rm -rf $(wildcard $(API)/*.o)
+	@echo "removing executables"
 	rm -rf $(wildcard *.exe)
+	
+cleanTmp: 
+	@echo "removing temporary files"
+	rm -rf $(wildcard $(TEMP)/*)
+	
+cleanLog:
+	@echo "removing log files"
+	rm -rf $(wildcard $(LOG)/*)
 	
 # TODO implement tests
 test1:

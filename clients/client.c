@@ -3,8 +3,17 @@
 #include <error.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/un.h>
+
+#ifndef UNIX_PATH_MAX
+    #define UNIX_PATH_MAX 108
+#endif
 
 #define helpMsg \
 "This program is an application designed to communicate with a file server through the communication API defined in this project, to upload and download files on it.\n\
@@ -33,7 +42,11 @@ The program acts on which command line arguments have been given, with the follo
 int main (int argc, char *argv[]) {
     char opt;
     unsigned int flags = 0;
+    int my_fdSocket;
+    struct sockaddr_un ServerSocketAddress;
     
+    // POSSIBLE IDEA : VECTOR OF REQUESTS
+
 
     while ((opt = getopt(argc, argv, "hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
         switch (opt) {  
@@ -52,7 +65,12 @@ int main (int argc, char *argv[]) {
                     fprintf(stderr, "Socket must be defined once and only once!\n");
                     exit(EXIT_FAILURE);
                 }
-                fprintf(stdout, "Option socket filename: %s\t NOT IMPLEMENTED\n", optarg);
+                if (strlen((char*)optarg) > UNIX_PATH_MAX) {
+                    fprintf(stderr, "Socket name too long!\n");
+                    exit(EXIT_FAILURE);
+                }
+                strncpy(ServerSocketAddress.sun_path, (char*) optarg, UNIX_PATH_MAX);
+                ServerSocketAddress.sun_family = AF_UNIX;
                 flags = flags | SOCKET_SET;
                 break;
             case 'w':
@@ -118,6 +136,22 @@ int main (int argc, char *argv[]) {
         
     if ((flags & READ_DIR) && !(flags & READ_SET))
         fprintf(stderr, "To read-to-directory read options ('-r' or '-R') are necessary!\n");
-        
+    
+    // debug trying connecting to the socket!
+    // socketAddr set in -f option
+    my_fdSocket = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    while ( connect(my_fdSocket, (struct sockaddr*) &ServerSocketAddress, sizeof(ServerSocketAddress)) == -1) {
+        if (errno == ENOENT) {
+            fprintf(stderr, "Server doesn't exists\n");
+            sleep(1);
+        } else {
+            perror("Connecting to server");
+            exit(EXIT_FAILURE);
+        }
+        errno = 0;
+    }
+    fprintf(stdout, "Connected!\n");
+
     return 0;
 }
