@@ -1,6 +1,6 @@
 # SOL project - FileStorage server
 
-**Evaluation project for the Operative Systems course at unipi, June-July 2022**
+**Test project for the Operative Systems course at unipi, June-July 2022**
 
 ## Description
 
