@@ -13,18 +13,30 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-
+#include <sys/poll.h>
+#include <signal.h>
 
 
 static Config _config;
+/* Setting signals TODO
+static void testSig (int signum) {
+    write(1, "Received signal %d\n", signum);
+    _exit(EXIT_FAILURE);
+}*/
 
 // SERVER MAIN
 int main (int argc, char *argv[]) {
     if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
     }
+    /* Setting signals TODO
+    struct sigaction sig;
+    memset(&sig, 0, sizeof(sig));
+
+    sig.sa_handler = testSig;
+    test_error(-1, sigaction(SIGINT, &sig, NULL), "Setting new SIGINT handler");
+    */
+
     pthread_t *workers;
-    int server_listener, client_socket;
-    struct sockaddr_un socketAddress;
     
     int devNull;
     int saveOut;
@@ -77,34 +89,113 @@ int main (int argc, char *argv[]) {
     fprintf(stdout, "\nMaking sockets...\n");    
     
     // Creating server socket
+    int server_listener, client_socket;
+    struct sockaddr_un socketAddress;
+
+    #define BUFSIZE 100
+    char client_Buffer[BUFSIZE]="N"; // Comunication buffer
+
+    struct pollfd communication_FDs[50];
+    short int nFDs = 1, tmpSize = 0, pollRes=0;
 
     strncpy(socketAddress.sun_path, _config.server_socket_name, UNIX_PATH_MAX);
     socketAddress.sun_family = AF_UNIX;
     
     unlink(socketAddress.sun_path); // in case the socket hasn't been cleaned or the file is already present or something
     errno=0; // we ignore errors from unlink, the notable ones should be found by socket and bind
-    test_error(-1, server_listener = socket(AF_UNIX, SOCK_STREAM, 0), "Creating server socket");
+    test_error(-1, server_listener = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0), "Creating server socket");
+    // server socket non-blocking => accepted connections will be non-blocking too!
+    
     test_error(-1, bind(server_listener, (struct sockaddr *) &socketAddress,  sizeof(socketAddress)), "Binding server socket");
     test_error(-1, listen(server_listener, SOMAXCONN), "Server listen");
 
     // sort of debug
     fprintf(stdout, "Server socket ready to listen in address: %s as fd: %d!\nReady to accept!\n", socketAddress.sun_path, server_listener); // debug
     fflush(stdout);
-    
-    // accepting client (should be in a while with a poll including the threads)
-    test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
-    fprintf(stdout, "Accepted a client!\n");
 
-    #define BUFSIZE 100
-    char client_Buffer[BUFSIZE];
+    // setting up poll
+    memset(communication_FDs, 0, sizeof(communication_FDs)); // probably not necessary but in case it might save stuff. Also helps not setting i-th revents to 0 manually
 
-    read(client_socket, client_Buffer, BUFSIZE);
-    
-    fprintf (stdout, "Client says: %s\n", client_Buffer);
+    communication_FDs[0].fd = server_listener;
+    communication_FDs[0].events = POLLIN;
 
+    bool done = false;
+    while (!done) {
+        fprintf(stdout, "Waiting on poll...\n");
+        fflush(stdout);
+        test_error(-1, pollRes = poll (communication_FDs, nFDs, 4000), "Poll failed");
 
-    test_error(-1, close(client_socket), "Closing client socket");
+        if (pollRes == 0) {
+            fprintf(stdout, "Timed out... Retry!\n");
+            continue;
+        }
 
+        tmpSize = nFDs;
+        for (short int i = 0; i < tmpSize; i++) {
+            if (communication_FDs[i].revents==0)
+                continue; // nothing to do here
+
+            if (communication_FDs[i].fd == server_listener) {
+                // Listening socket -> accept!
+                fprintf(stdout, "Listening socket reading\n");
+
+                do {
+                    client_socket = accept(server_listener, NULL, 0);
+                    if (client_socket < 0) {
+                        if (errno != EWOULDBLOCK) {// not break => actual error    
+                            perror("Accepting clients");
+                            exit(EXIT_FAILURE);
+                        }
+                    } else {
+                        fprintf(stdout, "Accepted client on fd %d\n", client_socket);
+                        
+                        communication_FDs[nFDs].fd = client_socket;
+                        communication_FDs[nFDs].events = POLLIN;
+                        nFDs++;
+                    }
+                } while (client_socket >= 0);
+            } else {
+                // Reading from a client!
+
+                fprintf(stdout, "Client on fd %d says - ", communication_FDs[i].fd);
+                
+                test_error(-1, read(communication_FDs[i].fd, client_Buffer, BUFSIZE), "Reading clients");
+
+                fprintf(stdout, "%s\n", client_Buffer);
+
+                if (strcmp("Exit", client_Buffer))
+                    done = true;
+
+                
+                communication_FDs[i].fd = -1; // to Close
+            }
+        }
+
+        // removing discarded FDs
+        for (short int i = 0; i < nFDs; i++) {
+            if (communication_FDs[i].fd == -1) {
+                // fd chiuso
+                for (short int j = i; j < nFDs; j++) {
+                    communication_FDs[j].fd = communication_FDs[j+i].fd;
+                }
+                i--;
+                nFDs --;
+            }
+        }
+    }
+
+    /*while (strcmp("Exit", client_Buffer)) {
+        // accepting client (should be in a while with a poll including the threads)
+        test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
+        fprintf(stdout, "Accepted a client!\n");
+
+        read(client_socket, client_Buffer, BUFSIZE);
+        
+        fprintf (stdout, "Client says: %s\n", client_Buffer);
+        fflush(stdout);    
+
+        test_error(-1, close(client_socket), "Closing client socket");
+    }*/
     // closing sockets 
     test_error(-1, unlink(socketAddress.sun_path), "Closing server socket");
     test_error(-1, close(server_listener), "Closing server socket");

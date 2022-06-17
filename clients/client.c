@@ -50,12 +50,12 @@ int main (int argc, char *argv[]) {
     // POSSIBLE IDEA : VECTOR OF REQUESTS
 
 
-    while ((opt = getopt(argc, argv, "hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
+    while ((opt = getopt(argc, argv, ":hpf:w:W:D:r:R:d:t:l:u:c:")) != -1) {
         switch (opt) {  
             case 'h':
                 fprintf(stdout, helpMsg);
                 exit(EXIT_SUCCESS);
-            case 'p':
+            case 'p': // TODO partially
                 if (flags & PRINT_SET)
                     fprintf(stderr, "Print already set\n");
                 else
@@ -75,78 +75,97 @@ int main (int argc, char *argv[]) {
                 ServerSocketAddress.sun_family = AF_UNIX;
                 flags = flags | SOCKET_SET;
                 break;
-            case 'w':
+            case 'w': // TODO
                 if (flags & WRITE_SET)
                     fprintf(stdout, "New write-from-directory!\t");
                 fprintf(stdout, "Option write-from-directory with: %s\t NOT_IMPLEMENTED\n", optarg);
                 flags = flags | WRITE_SET;
                 break;
-            case 'W':
+            case 'W': // TODO
                 if (flags & WRITE_SET)
                     fprintf(stdout, "New write files!\t");
                 strncpy(test, optarg, 100);
                 flags = flags | WRITE_SET;
                 break;
-            case 'D':
+            case 'D': // TODO
                 if (flags & WRITE_DIR)
                     fprintf(stdout, "New discard directory!\t");
                 fprintf(stdout, "Option discard-to-directory with: %s\t NOT_IMPLEMENTED\n", optarg);
                 flags = flags | WRITE_DIR;
                 break;
-            case 'r':
+            case 'r': // TODO
                 if (flags & READ_SET)
                     fprintf(stdout, "New read files!\t");
                 fprintf(stdout, "Option read files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 flags = flags | READ_SET;
                 break;
-            case 'R':
+            case 'R': // TODO
                 if (flags & READ_SET)
                     fprintf(stdout, "New read files!\t");
                 fprintf(stdout, "Option read N files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 flags = flags | READ_SET;
                 break;
-            case 'd':
+            case 'd': // TODO
                 if (flags & READ_DIR)
                     fprintf(stdout, "New read-to-directory!\t");
                 fprintf(stdout, "Option read-to-directory with: %s\t NOT_IMPLEMENTED\n", optarg);
                 flags = flags | READ_DIR;
                 break;
-            case 't':
+            case 't': // TODO
                 fprintf(stdout, "Option set time interval with: %d\t NOT_IMPLEMENTED\n", atoi(optarg));
                 break;
-            case 'l':
+            case 'l': // TODO
                 fprintf(stdout, "Option lock files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 break;
-            case 'u':
+            case 'u': // TODO
                 fprintf(stdout, "Option unlock files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 break;
-            case 'c':
+            case 'c': // TODO
                 fprintf(stdout, "Option close files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 break;
+            case ':': 
+                fprintf(stdout, "Option needs a value!\n");
+                break;
+            case '?':
+                fprintf(stdout, "Unknown option %c\n", optopt);
+                exit(EXIT_FAILURE);
+                break;
             default:
-                fprintf(stderr, "I'm confused. Opt = %c ..?\n", opt);
+                fprintf(stderr, "Error reading %c ..?\n", optopt);
+                exit(EXIT_FAILURE);
+                break;
         }
-        fprintf(stdout, "\t\tflags = %x\n", flags);
+        fprintf(stdout, "\t\tflags = %x\n", flags); // debug
         fflush(stdout);
     }
 
-    if (!(flags & SOCKET_SET))
-        fprintf(stderr, "Must give a socket path! (unless help is called but that terminates otherwise)\n");
-
-    if ((flags & WRITE_DIR) && !(flags & WRITE_SET))
-        fprintf(stderr, "To discard-to-directory writing options ('-w' or '-W') are necessary!\n");
-        
-    if ((flags & READ_DIR) && !(flags & READ_SET))
-        fprintf(stderr, "To read-to-directory read options ('-r' or '-R') are necessary!\n");
     
+    if (optind < argc) {
+        fprintf(stderr, "Argument not recognized: %s\n", argv[optind]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (!(flags & SOCKET_SET)) {
+        fprintf(stderr, "Must give a socket path!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if ((flags & WRITE_DIR) && !(flags & WRITE_SET)) {
+        fprintf(stderr, "To discard-to-directory writing options ('-w' or '-W') are necessary!\n");
+        exit(EXIT_FAILURE);
+    }
+    if ((flags & READ_DIR) && !(flags & READ_SET)) {
+        fprintf(stderr, "To read-to-directory read options ('-r' or '-R') are necessary!\n");
+        exit(EXIT_FAILURE);
+    }
     // debug trying connecting to the socket!
     // socketAddr set in -f option
-    my_fdSocket = socket(AF_UNIX, SOCK_STREAM, 0);
+    my_fdSocket = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 
     while ( connect(my_fdSocket, (struct sockaddr*) &ServerSocketAddress, sizeof(ServerSocketAddress)) == -1) {
         if (errno == ENOENT) {
-            fprintf(stderr, "Server doesn't exists\n");
-            sleep(1);
+            fprintf(stderr, "Server %s doesn't exists\n", ServerSocketAddress.sun_path);
+            sleep(2);
         } else {
             perror("Connecting to server");
             exit(EXIT_FAILURE);
@@ -159,5 +178,6 @@ int main (int argc, char *argv[]) {
 
     close(my_fdSocket);
 
+    fprintf(stdout, "Done.\n");
     exit(EXIT_SUCCESS);
 }
