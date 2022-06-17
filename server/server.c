@@ -163,7 +163,7 @@ int main (int argc, char *argv[]) {
 
                 fprintf(stdout, "%s\n", client_Buffer);
 
-                if (strcmp("Exit", client_Buffer))
+                if (!strcmp("Exit", client_Buffer))
                     done = true;
 
                 
