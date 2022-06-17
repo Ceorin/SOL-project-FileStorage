@@ -1,10 +1,11 @@
 # SOL project - FileStorage server
 
-**Evaluation project for the Operative Systems course at unipi, June-July 2022**
+**Examination project for the Operative Systems course at unipi, June-July 2022**
 
 ## Description
 
-The project consists of developing a file storage server that uses the main memory to store files in an **UNIX** environment.
+The project consists of making a client-server applications in an **UNIX** environment using C language and UNIX functionalities.
+In particular, it is a client server file-server application that runs on the same machine, and uploads nad downloads files into the memory.
 
 The server is a multi-threaded process that accepts connection from multiple clients on the same device (using AF_UNIX sockets), logging every operation.
 
