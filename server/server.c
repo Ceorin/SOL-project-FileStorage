@@ -166,7 +166,7 @@ int main (int argc, char *argv[]) {
                 if (!strcmp("Exit", client_Buffer))
                     done = true;
 
-                
+                test_error(-1, close(communication_FDs[i].fd), "Closing client");
                 communication_FDs[i].fd = -1; // to Close
             }
         }
