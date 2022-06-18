@@ -124,10 +124,11 @@ int main (int argc, char *argv[]) {
                 fprintf(stdout, "Option close files with: %s\t NOT_IMPLEMENTED\n", optarg);
                 break;
             case ':': 
-                fprintf(stdout, "Option needs a value!\n");
+                fprintf(stdout, "Option -%c requires an argument!\n", optopt);
+                exit(EXIT_FAILURE);
                 break;
             case '?':
-                fprintf(stdout, "Unknown option %c\n", optopt);
+                fprintf(stdout, "Option -%c not recognized\n", optopt);
                 exit(EXIT_FAILURE);
                 break;
             default:

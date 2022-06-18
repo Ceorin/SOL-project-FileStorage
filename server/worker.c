@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "worker.h"
 #include "server.h"
 #include "fileCache.h"
@@ -78,5 +79,42 @@ void* testThread(void *arg) { // TODO redo this - this is mainly a mockup thing 
     pthread_exit((void*) td.threadId );
 }
 
-//bop
+void* workerThread(void* arg) { // does it need args?
+    /* worker thread should: 
+    until termination: {
+        get a client FD from the master
+        read client request
+        act on client request
+        send answer to client
+        inform server that client FD has to be listened again (or has to be closed?) // implement with a pipe workers > server; the writes should be atomic anyway
+    }
+    */
+    int pipeToMain = (*(int*) arg);
+    pid_t tid = gettid();
 
+    fprintf(stdout, "Thread %d going\n", tid);
+
+    int FD_toServe = -1;
+    char myBuffer[CO_BUFSIZE] = "";
+    char msg[20] = "";
+    snprintf(msg, 20, "Hello from %d\n", tid);
+    test_error(-1, write(pipeToMain, msg, 20), "Writing to main");
+
+    fprintf(stdout, "Thread %d out!\n", tid);   
+    
+    return 0;
+
+    /*
+    while (true) {
+        FD_toServe = getClient();
+        if (FD_toServe == -1) {
+            fprintf(stderr, "Thread %d: Serving -1? huh?\n", tid);
+            pthread_exit(-1);
+        }
+        else {
+            test_error(-1, read(FD_toServe, myBuffer, CO_BUFSIZE), "Reading clients");
+            fprintf(stdout, "Thread %d read from client %d: %s\n", tid, FD_toServe, myBuffer);
+        }
+    }*/
+
+}

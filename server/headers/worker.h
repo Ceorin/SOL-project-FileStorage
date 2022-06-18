@@ -6,11 +6,11 @@
         int threadId;
     } threadData;
     
-    
+    #define CO_BUFSIZE 100
     
     
     
     void* testThread(void*);
-
+    void* workerThread(void*);
 
 #endif

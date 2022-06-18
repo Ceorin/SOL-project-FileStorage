@@ -62,17 +62,40 @@ int main (int argc, char *argv[]) {
     // Allocation of worker threads
     test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
     
+    // point of PIPE TEST REMOVE
+    int workersPipe[2];
+    test_error(-1, pipe(workersPipe), "Creating pipe");
+    
+    for (int i = 0; i < _config.thread_num; i++) {
+        test_error_isNot(0, errno = pthread_create(workers+i, NULL, &workerThread, (void*) &workersPipe[1]), "Creating a worker thread");
+    }
+    int readB;
+    char buf[CO_BUFSIZE];
+
+    for (int i = 0; i < 5; i++) {
+        readB = read(workersPipe[0], buf, 20);
+        if (readB < 0) {
+            perror("Reading from pipe");
+            exit(EXIT_FAILURE);
+        }
+        fprintf(stdout, "Read this from pipe: %s\n", buf);
+    }
+    close(workersPipe[0]);
+    close(workersPipe[1]);
+
+
+    
     // mockup allocation of workers
     threadData * threadArgs;
    
-    
+    /*
     for (int i = 0; i < _config.thread_num; i++) {
         char errmsg[40];
         snprintf(errmsg, 40, "Creating thread %d", i);
         test_error (NULL, threadArgs = (threadData*) malloc(sizeof(threadArgs)),  errmsg);
         threadArgs->threadId=i;
         test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
-    }
+    }*/
 
     for (int i = 0; i < _config.thread_num; i++) {
         int status;
@@ -93,8 +116,7 @@ int main (int argc, char *argv[]) {
     int server_listener, client_socket;
     struct sockaddr_un socketAddress;
 
-    #define BUFSIZE 100
-    char client_Buffer[BUFSIZE]="N"; // Comunication buffer
+    char client_Buffer[CO_BUFSIZE]="N"; // Comunication buffer
 
     struct pollfd* communication_FDs = (struct pollfd *) malloc ((REQ_QSIZE+_config.thread_num*2)*sizeof(struct pollfd));
     short int nFDs = 1, tmpSize = 0, pollRes=0;
@@ -160,7 +182,7 @@ int main (int argc, char *argv[]) {
 
                 fprintf(stdout, "Client on fd %d says - ", communication_FDs[i].fd);
                 
-                test_error(-1, read(communication_FDs[i].fd, client_Buffer, BUFSIZE), "Reading clients");
+                test_error(-1, read(communication_FDs[i].fd, client_Buffer, CO_BUFSIZE), "Reading clients");
 
                 fprintf(stdout, "%s\n", client_Buffer);
 
@@ -190,7 +212,7 @@ int main (int argc, char *argv[]) {
         test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
         fprintf(stdout, "Accepted a client!\n");
 
-        read(client_socket, client_Buffer, BUFSIZE);
+        read(client_socket, client_Buffer, CO_BUFSIZE);
         
         fprintf (stdout, "Client says: %s\n", client_Buffer);
         fflush(stdout);    
