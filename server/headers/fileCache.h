@@ -18,10 +18,9 @@
         // TODO add mutex for access? or at least for the clean algorithm?
         pthread_mutex_t mutex;
     } fileCache;
+    extern fileCache _fileCache;
 
-    static fileCache _fileCache;
-
-    int initCache (Config);
+    int initCache ();
     void mockupAccessCache (int);
     void mockupCheckMemory ();
 #endif

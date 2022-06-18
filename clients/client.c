@@ -173,7 +173,7 @@ int main (int argc, char *argv[]) {
         errno = 0;
     }
     fprintf(stdout, "Connected!\n");
-
+    sleep(5);
     write(my_fdSocket, test, 100);
 
     close(my_fdSocket);

@@ -4,7 +4,9 @@
 #include "fileCache.h"
 #include "server.h"
 
-int initCache (Config con) { // TODO better of course
+fileCache _fileCache;
+
+int initCache () { // TODO better of course
     if (_fileCache.fileArray != NULL || _fileCache.memory_in_use > 0 || _fileCache.file_num > 0) {
         // ALREADY INITIALIZED - ERROR!
         return -1;
@@ -12,7 +14,7 @@ int initCache (Config con) { // TODO better of course
     printf("\ninitializing cache"); //debug
     _fileCache.memory_in_use = 0;
     _fileCache.file_num = 0;
-    test_error(NULL, _fileCache.fileArray = (myFile*) malloc (con.file_num * sizeof(myFile)), "Creating cache"); // NOT 10 - SEE CONFIG
+    test_error(NULL, _fileCache.fileArray = (myFile*) malloc (_config.file_num * sizeof(myFile)), "Creating cache"); // NOT 10 - SEE CONFIG
     test_error_isNot(0, pthread_mutex_init(&_fileCache.mutex, NULL), "Creating cache");
     // EVENTUAL OTHER INITs
     printf("\ncache initialized\n\n"); //debug

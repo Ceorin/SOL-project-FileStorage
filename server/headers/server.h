@@ -6,6 +6,7 @@
         if ((sc) != (comp) ) { perror (msg); exit(EXIT_FAILURE); }
 
     #define DEFAULT_CONFIG "config/config.txt"
+
     #define FILE_UPPER_BOUND 1000
     #define MEMORY_UPPER_BOUND 1000000000
     #define WORKER_UPPER_BOUND 64
@@ -14,6 +15,8 @@
         #define UNIX_PATH_MAX 108
     #endif
 
+    #define REQ_QSIZE 15
+
     typedef struct {
         unsigned int file_num;
         unsigned int cache_size;
@@ -21,6 +24,7 @@
         char server_socket_name[UNIX_PATH_MAX]; 
         char log_file_name[UNIX_PATH_MAX];
     } Config;
+    extern Config _config;
 
     void readConfig (char*);
 #endif

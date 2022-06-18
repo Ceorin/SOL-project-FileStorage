@@ -17,7 +17,7 @@
 #include <signal.h>
 
 
-static Config _config;
+Config _config;
 /* Setting signals TODO
 static void testSig (int signum) {
     write(1, "Received signal %d\n", signum);
@@ -37,32 +37,34 @@ int main (int argc, char *argv[]) {
     */
 
     pthread_t *workers;
-    
+    /*
     int devNull;
     int saveOut;
     // debug stuff - redirecting stdout (and saving it to recover it later)
     test_error(-1, saveOut = dup(STDOUT_FILENO), "Saving stdout descriptor");
     test_error(-1, devNull = open("/dev/null", O_WRONLY), "Opening dev/null"); // debug: send away stdout for a while
     test_error(-1, dup2(devNull, STDOUT_FILENO), "Redirecting stdout");
+    */
 
     // readd Config file
     if (argc == 2) readConfig (argv[1]);
     else readConfig (DEFAULT_CONFIG);
+    
+    int logFile;
+    test_error(-1, logFile = open(_config.log_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644), "Opening log file");
+    test_error(-1, dup2(logFile, STDOUT_FILENO), "Redirecting stdout");
 
-    // debug print - read inputted current _config
-    fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
+    // debug print - read inputted current _config fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
     
     // not really mockup but needs better implementation once the cache is developed
     initCache(_config);
 
-    // mockup allocation of worker threads
+    // Allocation of worker threads
     test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
     
-    
+    // mockup allocation of workers
     threadData * threadArgs;
    
-    /*pthread_mutex_t mutexVar;
-    pthread_mutex_init(&mutexVar, NULL);*/
     
     for (int i = 0; i < _config.thread_num; i++) {
         char errmsg[40];
@@ -78,9 +80,8 @@ int main (int argc, char *argv[]) {
         fprintf(stdout, "MAIN joined thread %d with value %d\n", i, status);
         fflush(stdout);
     }
-
-    // debug reopening stdout;
-    test_error(-1, dup2(saveOut, STDOUT_FILENO), "Re-redirecting stdout");
+    
+    // debug reopening stdout; test_error(-1, dup2(saveOut, STDOUT_FILENO), "Re-redirecting stdout");
     
     // debug messages and such
     fprintf(stdout, "Main finished");
@@ -95,7 +96,7 @@ int main (int argc, char *argv[]) {
     #define BUFSIZE 100
     char client_Buffer[BUFSIZE]="N"; // Comunication buffer
 
-    struct pollfd communication_FDs[50];
+    struct pollfd* communication_FDs = (struct pollfd *) malloc ((REQ_QSIZE+_config.thread_num*2)*sizeof(struct pollfd));
     short int nFDs = 1, tmpSize = 0, pollRes=0;
 
     strncpy(socketAddress.sun_path, _config.server_socket_name, UNIX_PATH_MAX);
@@ -184,7 +185,7 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    /*while (strcmp("Exit", client_Buffer)) {
+    while (strcmp("Exit", client_Buffer)) {
         // accepting client (should be in a while with a poll including the threads)
         test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
         fprintf(stdout, "Accepted a client!\n");
@@ -195,7 +196,7 @@ int main (int argc, char *argv[]) {
         fflush(stdout);    
 
         test_error(-1, close(client_socket), "Closing client socket");
-    }*/
+    }
     // closing sockets 
     test_error(-1, unlink(socketAddress.sun_path), "Closing server socket");
     test_error(-1, close(server_listener), "Closing server socket");
