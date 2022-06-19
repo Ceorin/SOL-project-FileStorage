@@ -154,8 +154,8 @@ int main (int argc, char *argv[]) {
         for (short int i = 0; i < tmpSize; i++) {
             if (pFDs[i].revents==0)
                 continue; // nothing to do here
-            if (pFDs[i].revents!=POLLIN) { //error rn
-                fprintf(stderr, "Idk what this request from %d is %d\n", pFDs[i].fd, pFDs[i].revents);
+            if (!(pFDs[i].revents & POLLIN)) { //error rn
+                fprintf(stdout, "Idk what this request from %d is %d\n", pFDs[i].fd, pFDs[i].revents);
             }
             
             if (pFDs[i].fd == server_listener)   {
