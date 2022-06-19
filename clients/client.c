@@ -45,7 +45,8 @@ int main (int argc, char *argv[]) {
     int my_fdSocket;
     struct sockaddr_un ServerSocketAddress;
 
-    char test[100] = "nothing, really...";
+    char test[100] = "nothing, really...\n";
+    char test2[100] = "nothing squared\n";
     
     // POSSIBLE IDEA : VECTOR OF REQUESTS
 
@@ -78,7 +79,7 @@ int main (int argc, char *argv[]) {
             case 'w': // TODO
                 if (flags & WRITE_SET)
                     fprintf(stdout, "New write-from-directory!\t");
-                fprintf(stdout, "Option write-from-directory with: %s\t NOT_IMPLEMENTED\n", optarg);
+                strncpy(test2, optarg, 100);
                 flags = flags | WRITE_SET;
                 break;
             case 'W': // TODO
@@ -161,11 +162,11 @@ int main (int argc, char *argv[]) {
     }
     // debug trying connecting to the socket!
     // socketAddr set in -f option
-    my_fdSocket = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    my_fdSocket = socket(AF_UNIX, SOCK_STREAM, 0);
 
     while ( connect(my_fdSocket, (struct sockaddr*) &ServerSocketAddress, sizeof(ServerSocketAddress)) == -1) {
         if (errno == ENOENT) {
-            fprintf(stderr, "Server %s doesn't exists\n", ServerSocketAddress.sun_path);
+            fprintf(stdout, "Server %s doesn't exists\n", ServerSocketAddress.sun_path);
             sleep(2);
         } else {
             perror("Connecting to server");
@@ -174,9 +175,10 @@ int main (int argc, char *argv[]) {
         errno = 0;
     }
     fprintf(stdout, "Connected!\n");
-    sleep(5);
-    write(my_fdSocket, test, 100);
-
+    sleep(1);
+    write(my_fdSocket, "Hey!", 5);
+    sleep(2);
+    write(my_fdSocket, "You!", 5);
     close(my_fdSocket);
 
     fprintf(stdout, "Done.\n");

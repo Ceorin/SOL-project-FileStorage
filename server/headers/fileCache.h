@@ -23,4 +23,5 @@
     int initCache ();
     void mockupAccessCache (int);
     void mockupCheckMemory ();
+    void cleanCache();
 #endif

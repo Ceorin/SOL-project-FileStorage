@@ -34,3 +34,7 @@ void mockupCheckMemory () {
     pthread_mutex_unlock(&_fileCache.mutex);
     fflush (stdout);
 }
+
+void cleanCache () { // TODO recursively cleanse of the data structure, I guess
+    free(_fileCache.fileArray);
+}

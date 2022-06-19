@@ -18,109 +18,99 @@
 
 
 Config _config;
-/* Setting signals TODO
-static void testSig (int signum) {
-    write(1, "Received signal %d\n", signum);
-    _exit(EXIT_FAILURE);
-}*/
+//Setting signals TODO
+static void handler_int_quit (int signum) {
+    write(STDOUT_FILENO, "Received SIGINT OR QUIT\n", 25);
+    _exit(EXIT_SUCCESS);
+}
+
+static void handler_hup (int signum) {
+    write(STDOUT_FILENO, "Received SIGHUP\n", 17);
+
+    _exit(EXIT_SUCCESS);
+}
 
 // SERVER MAIN
 int main (int argc, char *argv[]) {
     if (argc > 2) { fprintf(stderr, "Starting server: the only possible parameter for the application is the config file\n"); exit(EXIT_FAILURE);
     }
-    /* Setting signals TODO
-    struct sigaction sig;
-    memset(&sig, 0, sizeof(sig));
+    // Setting signals TODO
+    struct sigaction sig1, sig2;
+    sigset_t sigMask;
 
-    sig.sa_handler = testSig;
-    test_error(-1, sigaction(SIGINT, &sig, NULL), "Setting new SIGINT handler");
-    */
+    memset(&sig1, 0, sizeof(sig1));
+    memset(&sig2, 0, sizeof(sig2));
 
-    pthread_t *workers;
-    /*
-    int devNull;
-    int saveOut;
-    // debug stuff - redirecting stdout (and saving it to recover it later)
-    test_error(-1, saveOut = dup(STDOUT_FILENO), "Saving stdout descriptor");
-    test_error(-1, devNull = open("/dev/null", O_WRONLY), "Opening dev/null"); // debug: send away stdout for a while
-    test_error(-1, dup2(devNull, STDOUT_FILENO), "Redirecting stdout");
-    */
+    // setting full mask to install handlers
+    test_error(-1, sigfillset(&sigMask), "Filling signal mask");
+    test_error_isNot(0, errno = pthread_sigmask(SIG_SETMASK, &sigMask, NULL), "Setting full mask");
+
+    sig1.sa_handler = handler_int_quit;
+    test_error(-1, sigaction(SIGINT, &sig1, NULL), "Setting new SIGINT handler");
+    test_error(-1, sigaction(SIGQUIT, &sig1, NULL), "Setting new SIGQUIT handler");
+
+    sig2.sa_handler = handler_hup;
+    test_error(-1, sigaction(SIGHUP, &sig2, NULL), "Setting new SIGHUP handler");
+    // handlers set, undoing mask
+    test_error(-1, sigemptyset(&sigMask), "Emptying mask");
+    test_error_isNot(0, errno = pthread_sigmask(SIG_SETMASK, &sigMask, NULL), "Removing full mask");
+
+    test_error(-1, sigaddset(&sigMask, SIGINT), "Adding SIGINT to mask");
+    test_error(-1, sigaddset(&sigMask, SIGQUIT), "Adding SIGINT to mask");
+    test_error(-1, sigaddset(&sigMask, SIGHUP), "Adding SIGINT to mask");
+
+      
 
     // readd Config file
     if (argc == 2) readConfig (argv[1]);
     else readConfig (DEFAULT_CONFIG);
-    
+
+    // logFile
     int logFile;
     test_error(-1, logFile = open(_config.log_file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644), "Opening log file");
     test_error(-1, dup2(logFile, STDOUT_FILENO), "Redirecting stdout");
-
+    
+    // Worker threads
+    pthread_t *workers;
+    test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
+    
+    // Pipe from workers to main
+    int workersPipe[2];
+    test_error(-1, pipe2(workersPipe, O_NONBLOCK), "Creating pipe");
+   
     // debug print - read inputted current _config fprintf(stdout, "Number of files: %u\nMemory size: %.2f MB\nThread number: %u\nSocket: %s\nLog file path: %s\n\n", _config.file_num, ((double) _config.cache_size)/1000000, _config.thread_num, _config.server_socket_name, _config.log_file_name);
     
     // not really mockup but needs better implementation once the cache is developed
     initCache(_config);
 
-    // Allocation of worker threads
-    test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
-    
-    // point of PIPE TEST REMOVE
-    int workersPipe[2];
-    test_error(-1, pipe(workersPipe), "Creating pipe");
-    
+    // Allocation of worker threads [including mockup test of Pipe]   
+    //pthread_attr_t workersAttr;
+    //test_error_isNot(0, errno = pthread_attr_init(&workersAttr), "Thread attribute init");
+    //test_error_isNot(0, errno = pthread_attr_setdetachstate(&workersAttr, PTHREAD_CREATE_DETACHED), "Thread attribute init");
+      
     for (int i = 0; i < _config.thread_num; i++) {
         test_error_isNot(0, errno = pthread_create(workers+i, NULL, &workerThread, (void*) &workersPipe[1]), "Creating a worker thread");
+        test_error_isNot(0, errno = pthread_detach(workers[i]), "Detaching thread");
     }
+    // mockup test of Pipe with the workers
     int readB;
     char buf[CO_BUFSIZE];
 
-    for (int i = 0; i < 5; i++) {
-        readB = read(workersPipe[0], buf, 20);
-        if (readB < 0) {
-            perror("Reading from pipe");
-            exit(EXIT_FAILURE);
-        }
-        fprintf(stdout, "Read this from pipe: %s\n", buf);
-    }
-    close(workersPipe[0]);
-    close(workersPipe[1]);
 
-
-    
-    // mockup allocation of workers
-    threadData * threadArgs;
-   
-    /*
-    for (int i = 0; i < _config.thread_num; i++) {
-        char errmsg[40];
-        snprintf(errmsg, 40, "Creating thread %d", i);
-        test_error (NULL, threadArgs = (threadData*) malloc(sizeof(threadArgs)),  errmsg);
-        threadArgs->threadId=i;
-        test_error_isNot(0, errno = pthread_create(workers+i, NULL, &testThread, threadArgs), errmsg);
-    }*/
-
-    for (int i = 0; i < _config.thread_num; i++) {
-        int status;
-        test_error_isNot(0, pthread_join(workers[i], (void*) &status), "Joining back a thread");
-        fprintf(stdout, "MAIN joined thread %d with value %d\n", i, status);
-        fflush(stdout);
-    }
-    
-    // debug reopening stdout; test_error(-1, dup2(saveOut, STDOUT_FILENO), "Re-redirecting stdout");
-    
-    // debug messages and such
-    fprintf(stdout, "Main finished");
-    mockupCheckMemory();
-    
-    fprintf(stdout, "\nMaking sockets...\n");    
+       
     
     // Creating server socket
+    fprintf(stdout, "\nMaking sockets...\n"); 
     int server_listener, client_socket;
     struct sockaddr_un socketAddress;
 
-    char client_Buffer[CO_BUFSIZE]="N"; // Comunication buffer
+    char communication_Buffer[CO_BUFSIZE]=""; // Comunication buffer
 
-    struct pollfd* communication_FDs = (struct pollfd *) malloc ((REQ_QSIZE+_config.thread_num*2)*sizeof(struct pollfd));
-    short int nFDs = 1, tmpSize = 0, pollRes=0;
+    struct pollfd* pFDs = (struct pollfd *) malloc ((50+_config.thread_num*3)*sizeof(struct pollfd));
+    short int nFDs = 2; // Server listener; Read-end of Main pipe
+    short int tmpSize = 0, pollRes=0;
 
+    // Creating listener...
     strncpy(socketAddress.sun_path, _config.server_socket_name, UNIX_PATH_MAX);
     socketAddress.sun_family = AF_UNIX;
     
@@ -132,33 +122,43 @@ int main (int argc, char *argv[]) {
     test_error(-1, bind(server_listener, (struct sockaddr *) &socketAddress,  sizeof(socketAddress)), "Binding server socket");
     test_error(-1, listen(server_listener, SOMAXCONN), "Server listen");
 
+
+
     // sort of debug
     fprintf(stdout, "Server socket ready to listen in address: %s as fd: %d!\nReady to accept!\n", socketAddress.sun_path, server_listener); // debug
     fflush(stdout);
 
+
     // setting up poll
-    memset(communication_FDs, 0, sizeof(communication_FDs)); // probably not necessary but in case it might save stuff. Also helps not setting i-th revents to 0 manually
+    memset(pFDs, 0, sizeof(pFDs)); // probably not necessary but in case it might save stuff. Also helps not setting i-th revents to 0 manually
 
-    communication_FDs[0].fd = server_listener;
-    communication_FDs[0].events = POLLIN;
+    pFDs[0].fd = server_listener;
+    pFDs[0].events = POLLIN;
 
+    pFDs[1].fd = workersPipe[0];
+    pFDs[1].events = POLLIN;
+    
     bool done = false;
     while (!done) {
-        fprintf(stdout, "Waiting on poll...\n");
+        sleep(2);
+        fprintf(stdout, "\nWaiting on poll...\n");
         fflush(stdout);
-        test_error(-1, pollRes = poll (communication_FDs, nFDs, 4000), "Poll failed");
+        test_error(-1, pollRes = poll (pFDs, nFDs, 10000), "Poll failed");
 
         if (pollRes == 0) {
-            fprintf(stdout, "Timed out... Retry!\n");
-            continue;
+            fprintf(stdout, "Timed out!\n");
+            break;
         }
 
         tmpSize = nFDs;
         for (short int i = 0; i < tmpSize; i++) {
-            if (communication_FDs[i].revents==0)
+            if (pFDs[i].revents==0)
                 continue; // nothing to do here
-
-            if (communication_FDs[i].fd == server_listener) {
+            if (pFDs[i].revents!=POLLIN) { //error rn
+                fprintf(stderr, "Idk what this request from %d is %d\n", pFDs[i].fd, pFDs[i].revents);
+            }
+            
+            if (pFDs[i].fd == server_listener)   {
                 // Listening socket -> accept!
                 fprintf(stdout, "Listening socket reading\n");
 
@@ -168,69 +168,103 @@ int main (int argc, char *argv[]) {
                         if (errno != EWOULDBLOCK) {// not break => actual error    
                             perror("Accepting clients");
                             exit(EXIT_FAILURE);
-                        }
+                        } else 
+                            errno = 0;
                     } else {
                         fprintf(stdout, "Accepted client on fd %d\n", client_socket);
                         
-                        communication_FDs[nFDs].fd = client_socket;
-                        communication_FDs[nFDs].events = POLLIN;
+                        pFDs[nFDs].fd = client_socket;
+                        pFDs[nFDs].events = POLLIN;
                         nFDs++;
                     }
                 } while (client_socket >= 0);
-            } else {
-                // Reading from a client!
+            } else if (pFDs[i].fd == workersPipe[0]) {
+                // Reading from worker pipe FD coming back
+                fprintf(stdout, "Reading worker pipe\n");
+                int FDread = -1;
+                do { 
+                    readB = read(pFDs[i].fd, &FDread, sizeof(int));
+                    if (readB == -1) {
+                        if (errno == EWOULDBLOCK)
+                            errno = 0;
+                        else {
+                            perror("Reading from pipe");
+                            exit(EXIT_FAILURE);
+                        }
+                    } else {
+                        fprintf(stdout, "Worker gave back fd:%d\n", FDread);
 
-                fprintf(stdout, "Client on fd %d says - ", communication_FDs[i].fd);
+                        if (FDread != -1) { // if it's a valid FD, start tracking it again!
+                            pFDs[nFDs].fd = FDread;
+                            pFDs[nFDs].events = POLLIN;
+                            nFDs++;
+                        }
+                        fprintf(stdout, "Inserted %d in poll as %d\n", FDread, pFDs[nFDs].fd);
+                    }
+                } while (readB >= 0);
                 
-                test_error(-1, read(communication_FDs[i].fd, client_Buffer, CO_BUFSIZE), "Reading clients");
-
-                fprintf(stdout, "%s\n", client_Buffer);
-
-                if (!strcmp("Exit", client_Buffer))
-                    done = true;
-
-                test_error(-1, close(communication_FDs[i].fd), "Closing client");
-                communication_FDs[i].fd = -1; // to Close
+            } else {
+                // Reading from a client?
+                // Give that client to the workers!
+                fprintf(stdout, "Clients %d wants to write > send to threadpool", pFDs[i]);
+                putClient(pFDs[i].fd);    
+                pFDs[i].fd = -1; // Remove this fd from the poll!
             }
+        }
+        
+        // debug
+        fprintf(stdout, "FD inside now:\n");
+        for (short int i = 0; i < nFDs; i++) {
+            fprintf(stdout, "%d\t", pFDs[i].fd);
         }
 
         // removing discarded FDs
         for (short int i = 0; i < nFDs; i++) {
-            if (communication_FDs[i].fd == -1) {
+            if (pFDs[i].fd == -1) {
                 // fd chiuso
                 for (short int j = i; j < nFDs; j++) {
-                    communication_FDs[j].fd = communication_FDs[j+i].fd;
+                    pFDs[j].fd = pFDs[j+1].fd;
+                    pFDs[j].events = pFDs[j+1].events;
                 }
                 i--;
                 nFDs --;
             }
         }
+
+        //debug
+        fprintf(stdout, "\nFD now?:\n");
+        for (short int i = 0; i < nFDs; i++) {
+            fprintf(stdout, "%d\t", pFDs[i].fd);
+        }
+
+        fflush(stdout);
     }
 
-    while (strcmp("Exit", client_Buffer)) {
-        // accepting client (should be in a while with a poll including the threads)
-        test_error(-1, client_socket = accept(server_listener, NULL, 0), "Accepting client");
-        fprintf(stdout, "Accepted a client!\n");
-
-        read(client_socket, client_Buffer, CO_BUFSIZE);
-        
-        fprintf (stdout, "Client says: %s\n", client_Buffer);
-        fflush(stdout);    
-
-        test_error(-1, close(client_socket), "Closing client socket");
-    }
     // closing sockets 
     test_error(-1, unlink(socketAddress.sun_path), "Closing server socket");
     test_error(-1, close(server_listener), "Closing server socket");
+
+
+
+    // debug messages and such
+    fprintf(stdout, "Main finished");
+    mockupCheckMemory(); // currently sum of messages received? 
+
+    // Cleanup? (To implement into a function)
+    cleanCache();
+    free(pFDs);
+    free(workers);
+    // TODO undetach threads on creation; implement a signal and then join them to clean resources
+
     exit(EXIT_SUCCESS);
 }
 
 
 
 
-
-
-// READ Config file from path
+/* -------------------------------------- ------------------- -------------------   */
+/* --- READ CONFIG ---------------------- ------------------- -------------------   */
+/* -------------------------------------- ------------------- -------------------   */
 void readConfig (char* path) { 
     int i = 0;
 

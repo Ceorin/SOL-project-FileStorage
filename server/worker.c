@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <errno.h>
 #include "worker.h"
 #include "server.h"
 #include "fileCache.h"
@@ -14,7 +16,7 @@ static pthread_cond_t full_ClientList = PTHREAD_COND_INITIALIZER;
 
 void putClient(int fd) {
     pthread_mutex_lock(&mutex_ClientList);
-    while (next >= REQ_QSIZE) {
+    while (next >= REQ_QSIZE-1) {
         fprintf (stdout, "Waiting for list not to be full\n");
         pthread_cond_wait(&full_ClientList,&mutex_ClientList);
     }
@@ -60,7 +62,7 @@ void* testThread(void *arg) { // TODO redo this - this is mainly a mockup thing 
         }
 
     }*/
-
+    /*
     for ( i = 0; i < 5; i++) {
         if (td.threadId % 2 == 0) {
             int ret = i+td.threadId;
@@ -76,7 +78,7 @@ void* testThread(void *arg) { // TODO redo this - this is mainly a mockup thing 
         fflush(stdout);
     }
 
-    pthread_exit((void*) td.threadId );
+    pthread_exit((void*) td.threadId );*/
 }
 
 void* workerThread(void* arg) { // does it need args?
@@ -92,29 +94,45 @@ void* workerThread(void* arg) { // does it need args?
     int pipeToMain = (*(int*) arg);
     pid_t tid = gettid();
 
-    fprintf(stdout, "Thread %d going\n", tid);
-
     int FD_toServe = -1;
     char myBuffer[CO_BUFSIZE] = "";
-    char msg[20] = "";
-    snprintf(msg, 20, "Hello from %d\n", tid);
-    test_error(-1, write(pipeToMain, msg, 20), "Writing to main");
+    int err=0;
+    bool closeClient;
 
-    fprintf(stdout, "Thread %d out!\n", tid);   
-    
-    return 0;
-
-    /*
     while (true) {
-        FD_toServe = getClient();
+        closeClient = false;
+        FD_toServe = getClient(); // gets a FD to read, might not be a new client!
         if (FD_toServe == -1) {
             fprintf(stderr, "Thread %d: Serving -1? huh?\n", tid);
-            pthread_exit(-1);
+        } else { 
+            do { // Serving client requests until done or block
+                err = read(FD_toServe, myBuffer, 5);
+                if (err < 0) {
+                    if (errno == EWOULDBLOCK) { // give back to main for listening
+                        errno = 0;
+                        break;
+                    } else { // error
+                        perror("Reading from client");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+
+                if (err > 0) {
+                    fprintf(stdout, "Thread %d read from client %d: %s\n", tid, FD_toServe, myBuffer);
+                    mockupAccessCache(tid);
+                    if(!strcmp("Exit", myBuffer))
+                        closeClient = true;
+                }
+            } while (err > 0 && !closeClient);
+            if (closeClient || err == 0) {
+                fprintf(stdout, "Client %d done.\n", FD_toServe);
+                close(FD_toServe);
+            } else {
+                test_error(-1, write(pipeToMain, FD_toServe, sizeof(int)), "Writing fd to main");
+            }
+
         }
-        else {
-            test_error(-1, read(FD_toServe, myBuffer, CO_BUFSIZE), "Reading clients");
-            fprintf(stdout, "Thread %d read from client %d: %s\n", tid, FD_toServe, myBuffer);
-        }
-    }*/
+        fflush(stdout);
+    }
 
 }
