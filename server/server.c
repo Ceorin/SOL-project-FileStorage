@@ -143,7 +143,7 @@ int main (int argc, char *argv[]) {
         sleep(2);
         fprintf(stdout, "\nWaiting on poll...\n");
         fflush(stdout);
-        test_error(-1, pollRes = poll (pFDs, nFDs, 10000), "Poll failed");
+        test_error(-1, pollRes = poll (pFDs, nFDs, 8000), "Poll failed");
 
         if (pollRes == 0) {
             fprintf(stdout, "Timed out!\n");

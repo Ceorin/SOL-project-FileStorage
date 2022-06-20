@@ -10,8 +10,12 @@ SERVER = server
 SERVER_HD = server/headers
 
 UTILITIES = utils
+CPPFLAGS += $(addprefix -iquote ,$(UTILITIES))
+
 TEMP = tmp
 LOG = log
+
+
 
 SERVER_C_SRC := $(wildcard $(SERVER)/*.c)
 SERVER_OBJ :=  $(SERVER_C_SRC:.c=.o)
@@ -29,11 +33,11 @@ $(SERVER_OBJ) :: CPPFLAGS += $(addprefix -iquote ,$(SERVER_HD))
 $(SERVER_OBJ) :: $(wildcard $(SERVER)/%.c) $(wildcard $(SERVER_HD)/*.h)
 
 # CLIENT dependencies
-clientApp.exe : $(CLIENTS)/client.o $(API)/communicationAPI.o
+clientApp.exe : $(CLIENTS)/client.o $(API)/communicationAPI.o 
 	$(CC) -pthread $^ -o $@
 
-$(CLIENTS)/client.o :: CPPFLAGS += $(addprefix -iquote ,$(API))	
-$(CLIENTS)/client.o :: $(CLIENTS)/client.c $(API)/communicationAPI.h
+$(CLIENTS)/client.o :: CPPFLAGS += $(addprefix -iquote ,$(API))
+$(CLIENTS)/client.o :: $(CLIENTS)/client.c $(API)/communicationAPI.h $(wildcard $(UTILITIES)/*.c) $(wildcard $(UTILITIES)/*.h)
 
 # Why won't the implicit make the object here?
 $(API)/communicationAPI.o : $(API)/communicationAPI.c $(API)/communicationAPI.h

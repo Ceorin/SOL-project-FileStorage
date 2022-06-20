@@ -11,9 +11,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#ifndef UNIX_PATH_MAX
-    #define UNIX_PATH_MAX 108
-#endif
+#include "myList.h"
+#include "myUtils.h"
 
 #define helpMsg \
 "This program is an application designed to communicate with a file server through the communication API defined in this project, to upload and download files on it.\n\
