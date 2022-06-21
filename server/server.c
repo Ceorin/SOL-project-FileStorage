@@ -72,7 +72,7 @@ int main (int argc, char *argv[]) {
     
     // Worker threads
     pthread_t *workers;
-    test_error(NULL, workers = (pthread_t *) malloc (_config.thread_num* sizeof(pthread_t)), "Allocating array of threads");
+    test_error(NULL, workers = (pthread_t *) calloc (_config.thread_num, sizeof(pthread_t)), "Allocating array of threads");
     
     // Pipe from workers to main
     int workersPipe[2];
@@ -106,7 +106,8 @@ int main (int argc, char *argv[]) {
 
     char communication_Buffer[CO_BUFSIZE]=""; // Comunication buffer
 
-    struct pollfd* pFDs = (struct pollfd *) malloc ((50+_config.thread_num*3)*sizeof(struct pollfd));
+    struct pollfd* pFDs;
+    test_error(NULL, pFDs = (struct pollfd *) calloc ((50+_config.thread_num*3), sizeof(struct pollfd)), "Allocating poll structure");
     short int nFDs = 2; // Server listener; Read-end of Main pipe
     short int tmpSize = 0, pollRes=0;
 
