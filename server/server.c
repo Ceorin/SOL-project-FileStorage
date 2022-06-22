@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <limits.h>
-#include "worker.h"
-#include "fileCache.h"
-#include "server.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/un.h>
@@ -16,6 +14,10 @@
 #include <sys/poll.h>
 #include <signal.h>
 
+#include "worker.h"
+#include "fileCache.h"
+#include "server.h"
+#include "myUtils.h"
 
 Config _config;
 //Setting signals TODO

@@ -441,7 +441,7 @@ unsigned int delete_List (list_t** list, void (*freeFunction)(void*) ) {
         free(deleting);
         count++;
     }
-
+    
 
     free(*list);
     *list = NULL; // in case the free implementation just unchecks the value

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "fileCache.h"
 #include "server.h"
+#include "myUtils.h"
 
 fileCache _fileCache;
 

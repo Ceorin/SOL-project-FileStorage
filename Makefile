@@ -30,7 +30,7 @@ serverApp.exe : $(SERVER_OBJ)
 	
 	
 $(SERVER_OBJ) :: CPPFLAGS += $(addprefix -iquote ,$(SERVER_HD))
-$(SERVER_OBJ) :: $(wildcard $(SERVER)/%.c) $(wildcard $(SERVER_HD)/*.h)
+$(SERVER_OBJ) :: $(wildcard $(SERVER)/%.c) $(wildcard $(SERVER_HD)/*.h) $(UTILITIES)/myUtils.h
 
 # CLIENT dependencies
 clientApp.exe : $(CLIENTS)/client.o $(API)/communicationAPI.o 

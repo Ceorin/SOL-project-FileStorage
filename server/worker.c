@@ -7,6 +7,7 @@
 #include "worker.h"
 #include "server.h"
 #include "fileCache.h"
+#include "myUtils.h"
 
 int ClientList[REQ_QSIZE];
 int next = -1;
