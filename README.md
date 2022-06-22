@@ -45,4 +45,5 @@ The values can be in any order but if any one line doesn't follow the pattern, i
 *If the config file used does not contain one of the five parameter, the value will be set to the default for that parameter*
 
 ## Version
-0.02 - Very little has been implemented, mostly mockups of functions. The Project is now public.
+0.1 - Client and Server can communicate very basically but it looks stable enough for a bit of connections.
+	Hashmap currently being worked on as the data structure to use for the File Cache
